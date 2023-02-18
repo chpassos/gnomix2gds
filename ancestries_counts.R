@@ -5,7 +5,7 @@ library(tidyverse)
 library(gdsfmt)
 library(SNPRelate)
 
-library(data.table)
+library(sqldf) # For conditional join
 
 # Counts of each ancestry in REDS-III
 ## AFR=0; EUR=1; NAM=2
@@ -113,10 +113,66 @@ nam_count <- info |>
 
 # Read this file
 pos <- 
-  read.table("/home/chpassos/Analises/REDS-III/ancestries/lai/chr11_output/chr11_pos.txt")
+  read.table("/home/chpassos/Analises/REDS-III/ancestries/lai/chr11_output/chr11_pos.txt") |>
+  mutate(pos = "11")
+
+# Files of interest
 head(pos)
+head(afr_count)
+head(eur_count)
+head(nam_count)
 
 # Conditional join
+## For the join to work, I do need to make the count df tidy..
+## The conditional join could take a while
+### African Ancestry conditional join
+tidy_afr <- afr_count |>
+  mutate(row_id = row_number()) |>
+  pivot_longer(-c(`#chm`, "spos", "epos", "sgpos", "egpos", `n snps`, "row_id"),
+               names_to = "sample_id",
+               values_to = "count") |>
+  rename("chromosome" = `#chm`,
+         "n_snps" = `n snps`)
+
+joined_afr <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
+      FROM tidy_afr 
+      LEFT JOIN pos ON V1 BETWEEN spos and epos')
+
+### European Ancestry
+tidy_eur <- eur_count |>
+  mutate(row_id = row_number()) |>
+  pivot_longer(-c(`#chm`, "spos", "epos", "sgpos", "egpos", `n snps`, "row_id"),
+               names_to = "sample_id",
+               values_to = "count") |>
+  rename("chromosome" = `#chm`,
+         "n_snps" = `n snps`)
+
+joined_eur <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
+      FROM tidy_eur 
+      LEFT JOIN pos ON V1 BETWEEN spos and epos')
+
+### Native American Ancestry
+tidy_nam <- nam_count |>
+  mutate(row_id = row_number()) |>
+  pivot_longer(-c(`#chm`, "spos", "epos", "sgpos", "egpos", `n snps`, "row_id"),
+               names_to = "sample_id",
+               values_to = "count") |>
+  rename("chromosome" = `#chm`,
+         "n_snps" = `n snps`)
+
+joined_nam <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
+      FROM tidy_nam 
+      LEFT JOIN pos ON V1 BETWEEN spos and epos')
+
+
+# With the conditional table, now return to wide format
+joined_afr |>
+  pivot_wider(names_from = "sample_id",
+              values_from = "count")
+
+
+joined_eur
+joined_nam
 
 
 
