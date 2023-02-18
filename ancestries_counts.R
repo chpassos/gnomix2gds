@@ -72,7 +72,7 @@ nam_dot1 <- df_dot1 |>
 
 # Summing AFR counts
 sum_afr <- map2(afr_dot0, afr_dot1, 
-     \(afr_dot0, afr_dot1) afr_dot0 + afr_dot1)
+                \(afr_dot0, afr_dot1) afr_dot0 + afr_dot1)
 # Summing EUR counts
 sum_eur <- map2(eur_dot0, eur_dot1, 
                 \(eur_dot0, eur_dot1) eur_dot0 + eur_dot1)
