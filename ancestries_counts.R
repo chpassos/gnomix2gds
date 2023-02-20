@@ -103,10 +103,16 @@ nam_count <- info |>
 # What happens now is that we have the ancestries count for EACH ANCESTRY
 # But only in the INTERVAL estimated by Gnomix
 # I need to get the ancestry count per position
-## It was best to do first in intervals, because otherwise the data
+## My choice of doing first by intervals was good because otherwise the data
 ## would have been very big to work with.
 ## Now I need to do a conditional join of each ancestry count tbl
 ## to a file that has the positions in the vcf data :)
+### I tried to fit all the positions that are in VCF, but 
+### it was taking wayyy too long
+### I will need to repeat the same task 3 times (each ancestry), 
+### for each chromosome (22).
+# So because of this, I will introduce some things below
+
 
 ## Get positions in VCF file used in Gnomix
 # bcftools query -f '%POS\n' REDS_chr11_gnomix.vcf.gz > chr11_pos.txt
@@ -116,8 +122,17 @@ pos <-
   read.table("/home/chpassos/Analises/REDS-III/ancestries/lai/chr11_output/chr11_pos.txt") |>
   mutate(pos = "11")
 
+# Gnomix intervals were estimated with ~500 SNPs per interval
+# I will try to keep 20% of that dataset
+## 20% of the positions present in the vcf
+pos_to_keep <- round(nrow(pos) * 0.1)
+# Sampling 20% of the positions, with no replacement
+new_pos <- pos |>
+  sample_n(size = pos_to_keep,
+           replace = FALSE)
+
 # Files of interest
-head(pos)
+head(new_pos)
 head(afr_count)
 head(eur_count)
 head(nam_count)
@@ -136,7 +151,7 @@ tidy_afr <- afr_count |>
 
 joined_afr <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
       FROM tidy_afr 
-      LEFT JOIN pos ON V1 BETWEEN spos and epos')
+      LEFT JOIN new_pos ON V1 BETWEEN spos and epos')
 
 ### European Ancestry
 tidy_eur <- eur_count |>
@@ -149,7 +164,7 @@ tidy_eur <- eur_count |>
 
 joined_eur <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
       FROM tidy_eur 
-      LEFT JOIN pos ON V1 BETWEEN spos and epos')
+      LEFT JOIN new_pos ON V1 BETWEEN spos and epos')
 
 ### Native American Ancestry
 tidy_nam <- nam_count |>
@@ -162,7 +177,7 @@ tidy_nam <- nam_count |>
 
 joined_nam <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
       FROM tidy_nam 
-      LEFT JOIN pos ON V1 BETWEEN spos and epos')
+      LEFT JOIN new_pos ON V1 BETWEEN spos and epos')
 
 
 # With the conditional table, now return to wide format
