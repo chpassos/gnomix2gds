@@ -99,7 +99,6 @@ nam_count <- info |>
   cbind(tbl_nam) |>
   as_tibble()
 
-
 # What happens now is that we have the ancestries count for EACH ANCESTRY
 # But only in the INTERVAL estimated by Gnomix
 # I need to get the ancestry count per position
@@ -130,6 +129,7 @@ head(eur_count)
 head(nam_count)
 
 # Conditional join
+### African Ancestry
 # I need to divide my dataset - It has so many columns!
 afr_count_d1 <- afr_count |> select(1:1376)
 afr_part1_joined <- sqldf('SELECT * FROM afr_count_d1 LEFT JOIN pos ON position BETWEEN spos and epos')
@@ -137,44 +137,61 @@ afr_part1_joined <- sqldf('SELECT * FROM afr_count_d1 LEFT JOIN pos ON position 
 afr_count_d2 <- afr_count |> select(c(1:6, 1377:ncol(afr_count)))
 afr_part2_joined <- sqldf('SELECT * FROM afr_count_d2 LEFT JOIN pos ON position BETWEEN spos and epos')
 
-  
+## All individuals - AFR Ancestry
+afr_part1_unglued <- afr_part1_joined |>
+  select(-c(`#chm`)) |>
+  select(chr, position, everything())
+afr_part2_unglued <- afr_part2_joined |>
+  select(-c(`#chm`, chr, position, spos, epos, sgpos, 
+            egpos, `n snps`))
+afr_glued <- cbind(afr_part1_unglued, afr_part2_unglued) |>
+  as_tibble()
 
 
 ### European Ancestry
-tidy_eur <- eur_count |>
-  mutate(row_id = row_number()) |>
-  pivot_longer(-c(`#chm`, "spos", "epos", "sgpos", "egpos", `n snps`, "row_id"),
-               names_to = "sample_id",
-               values_to = "count") |>
-  rename("chromosome" = `#chm`,
-         "n_snps" = `n snps`)
+# The same way as before, I will divide my data
+eur_count_d1 <- eur_count |> select(1:1376)
+eur_part1_joined <- sqldf('SELECT * FROM eur_count_d1 LEFT JOIN pos ON position BETWEEN spos and epos')
 
-joined_eur <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
-      FROM tidy_eur 
-      LEFT JOIN new_pos ON V1 BETWEEN spos and epos')
+eur_count_d2 <- eur_count |> select(c(1:6, 1377:ncol(eur_count)))
+eur_part2_joined <- sqldf('SELECT * FROM eur_count_d2 LEFT JOIN pos ON position BETWEEN spos and epos')
+
+## All individuals - EUR Ancestry
+eur_part1_unglued <- eur_part1_joined |>
+  select(-c(`#chm`)) |>
+  select(chr, position, everything())
+eur_part2_unglued <- eur_part2_joined |>
+  select(-c(`#chm`, chr, position, spos, epos, sgpos, 
+            egpos, `n snps`))
+eur_glued <- cbind(eur_part1_unglued, eur_part2_unglued) |>
+  as_tibble()
 
 ### Native American Ancestry
-tidy_nam <- nam_count |>
-  mutate(row_id = row_number()) |>
-  pivot_longer(-c(`#chm`, "spos", "epos", "sgpos", "egpos", `n snps`, "row_id"),
-               names_to = "sample_id",
-               values_to = "count") |>
-  rename("chromosome" = `#chm`,
-         "n_snps" = `n snps`)
+# I need to divide my dataset - It has so many columns!
+nam_count_d1 <- nam_count |> select(1:1376)
+nam_part1_joined <- sqldf('SELECT * FROM nam_count_d1 LEFT JOIN pos ON position BETWEEN spos and epos')
 
-joined_nam <- sqldf('SELECT chromosome, spos, epos, sample_id, count 
-      FROM tidy_nam 
-      LEFT JOIN new_pos ON V1 BETWEEN spos and epos')
+nam_count_d2 <- nam_count |> select(c(1:6, 1377:ncol(nam_count)))
+nam_part2_joined <- sqldf('SELECT * FROM nam_count_d2 LEFT JOIN pos ON position BETWEEN spos and epos')
+
+## All individuals - NAM Ancestry
+nam_part1_unglued <- nam_part1_joined |>
+  select(-c(`#chm`)) |>
+  select(chr, position, everything())
+nam_part2_unglued <- nam_part2_joined |>
+  select(-c(`#chm`, chr, position, spos, epos, sgpos, 
+            egpos, `n snps`))
+nam_glued <- cbind(nam_part1_unglued, nam_part2_unglued) |>
+  as_tibble()
 
 
-# With the conditional table, now return to wide format
-joined_afr |>
-  pivot_wider(names_from = "sample_id",
-              values_from = "count")
-
-
-joined_eur
-joined_nam
+# Now, we need to make the GDS for each ancestry
+## GDS file has these columns:
+### sample.id
+### snp.id
+### snp.position
+### snp.allele
+### genotype
 
 
 
